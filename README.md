@@ -10,7 +10,7 @@ Create a file called `credentials.json` with the following content:
 
 ```
 
-Install python3
+Install [python3](https://www.python.org/downloads/), [Google Chrome](https://www.google.com/chrome/) and [chromedriver](https://sites.google.com/a/chromium.org/chromedriver/downloads)
 
 Install the python dependencies with:
 

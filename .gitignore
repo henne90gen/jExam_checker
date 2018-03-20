@@ -1,6 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea/
+.vscode/
+env/
 credentials.json
 last_result.bin
-env/
+
 
