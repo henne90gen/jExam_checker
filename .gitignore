@@ -2,3 +2,5 @@
 .idea/
 credentials.json
 last_result.bin
+env/
+
