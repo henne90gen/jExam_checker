@@ -8,18 +8,30 @@ from html.parser import HTMLParser
 from selenium import webdriver
 
 
-def login(driver):
+def login(driver, credentials_filename):
     username_input = driver.find_element_by_id("username")
     password_input = driver.find_element_by_id("password")
 
-    credentials = json.loads(open("credentials.json").read())
+    try:
+        credentials = json.loads(open(credentials_filename).read())
+
+        if 'username' not in credentials or 'password' not in credentials:
+            raise Exception("Missing username or password")
+    except Exception as e:
+        print("Could not load credentials.json")
+        print(e)
+        return False
+
     username_input.send_keys(credentials['username'])
     password_input.send_keys(credentials['password'])
 
     submit_button = driver.find_element_by_class_name("submit")
     submit_button.click()
 
-    return len(driver.find_elements_by_class_name("error-box")) == 0
+    if len(driver.find_elements_by_class_name("error-box")) > 0:
+        print("Can't login because jExam sucks")
+        return False
+    return True
 
 
 def get_link(driver, text, look_in="text"):
@@ -140,11 +152,21 @@ def check_for_differences(result_filename, new_courses):
 
 
 def main():
-    driver = webdriver.Chrome()
+    credentials_filename = "credentials.json"
+    if not os.path.exists(credentials_filename):
+        print("Create a credentials.json file")
+        return
+
+    try:
+        driver = webdriver.Chrome()
+    except Exception as e:
+        print(e)
+        print("Could not initialize the webdriver")
+        return
+
     driver.get("https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome")
 
-    if not login(driver):
-        print("Can't login because jExam sucks")
+    if not login(driver, credentials_filename):
         driver.close()
         return
 

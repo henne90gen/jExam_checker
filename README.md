@@ -10,8 +10,16 @@ Create a file called `credentials.json` with the following content:
 
 ```
 
-Install the dependencies with:
+Install python3
+
+Install the python dependencies with:
 
 ```bash
 pip install -r requirements.txt
+```
+
+Run the script:
+
+```bash
+python main.py
 ```
