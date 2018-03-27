@@ -4,6 +4,7 @@ import os
 import pickle
 import re
 from html.parser import HTMLParser
+from pyvirtualdisplay import Display
 
 from selenium import webdriver
 
@@ -152,6 +153,9 @@ def check_for_differences(result_filename, new_courses):
 
 
 def main():
+    virtual_display = Display(visible=0, size=(800, 600))
+    virtual_display.start()
+
     credentials_filename = "credentials.json"
     if not os.path.exists(credentials_filename):
         print("Create a credentials.json file")
