@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 import re
+from pprint import pprint
 from html.parser import HTMLParser
 from pyvirtualdisplay import Display
 
@@ -193,7 +194,7 @@ def main():
 
     courses = create_courses(rows)
 
-    # print(courses)
+    #pprint(courses)
 
     result_filename = "last_result.bin"
     check_for_differences(result_filename, courses)
