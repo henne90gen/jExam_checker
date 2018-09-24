@@ -1,8 +1,10 @@
 import datetime
+import argparse
 import json
 import os
 import pickle
 import re
+from typing import Optional
 from pprint import pprint
 from html.parser import HTMLParser
 from pyvirtualdisplay import Display
@@ -92,7 +94,8 @@ def create_courses(rows: list) -> list:
             date_pattern = r'([0-9]{2}\.[0-9]{2}\.[0-9]{4})'
             date_match = re.match(date_pattern, column[:10])
             if date_match and date_match.group(1):
-                course['date'] = datetime.datetime.strptime(column[:10], "%d.%m.%Y")
+                course['date'] = datetime.datetime.strptime(
+                    column[:10], "%d.%m.%Y")
             if "INF" in column:
                 course['name'] = column
             if "Bestanden" in column:
@@ -153,7 +156,7 @@ def check_for_differences(result_filename, new_courses):
             print("No new grades found.")
 
 
-def main():
+def download_courses() -> Optional[list]:
     virtual_display = Display(visible=0, size=(800, 600))
     virtual_display.start()
 
@@ -192,15 +195,58 @@ def main():
     get_link(driver, 'Abmelden').click()
     driver.close()
 
-    courses = create_courses(rows)
+    return create_courses(rows)
 
-    #pprint(courses)
+
+def check_grades():
+    courses = download_courses()
+
+    if courses is None:
+        return
+
+    # pprint(courses)
 
     result_filename = "last_result.bin"
     check_for_differences(result_filename, courses)
 
     with open(result_filename, "wb+") as f:
         pickle.dump(courses, f)
+
+
+def print_grades():
+    result_filename = "last_result.bin"
+    with open(result_filename, "rb") as f:
+        courses = pickle.load(f)
+
+    def print_passed(course):
+        if 'passed' in course:
+            return 'Passed' if course['passed'] else 'Not passed'
+        else:
+            return '?'
+
+    for course in courses:
+        print(f"{course['grade']} ({print_passed(course)}): {course['name']}")
+
+
+def setup_check_grades(subparsers):
+    extract_parser = subparsers.add_parser('check')
+    extract_parser.set_defaults(func=check_grades)
+
+
+def setup_print_grades(subparsers):
+    dashboard_parser = subparsers.add_parser('show')
+    dashboard_parser.set_defaults(func=print_grades)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    setup_check_grades(subparsers)
+    setup_print_grades(subparsers)
+
+    options = parser.parse_args()
+    options.func()
 
 
 def alter_result():
