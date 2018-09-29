@@ -246,7 +246,10 @@ def main():
     setup_print_grades(subparsers)
 
     options = parser.parse_args()
-    options.func()
+    if hasattr(options, "func"):
+        options.func()
+    else:
+        parser.print_help()
 
 
 def alter_result():
