@@ -4,6 +4,8 @@ import json
 import os
 import pickle
 import re
+import logging
+import sys
 from typing import Optional
 from pprint import pprint
 from html.parser import HTMLParser
@@ -12,7 +14,20 @@ from pyvirtualdisplay import Display
 from selenium import webdriver
 
 
+logging.basicConfig(level=logging.INFO)
+LOG = logging.getLogger()
+handler = logging.StreamHandler(stream=sys.stdout)
+formatter = logging.Formatter(
+    "[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
+handler.setFormatter(formatter)
+LOG.handlers.clear()
+LOG.addHandler(handler)
+LOG.setLevel(logging.INFO)
+
+
 def login(driver, credentials_filename):
+    LOG.info("Logging in...")
+
     username_input = driver.find_element_by_id("username")
     password_input = driver.find_element_by_id("password")
 
@@ -33,7 +48,7 @@ def login(driver, credentials_filename):
     submit_button.click()
 
     if len(driver.find_elements_by_class_name("error-box")) > 0:
-        print("Can't login because jExam sucks")
+        LOG.warning("Can't login because jExam sucks")
         return False
     return True
 
@@ -136,8 +151,8 @@ def check_for_differences(result_filename, new_courses):
 
             if old_course is None:
                 global_found_diff = True
-                print("Found a new grade:")
-                print("\t", new_course)
+                LOG.info("Found a new grade:")
+                LOG.info("\t", new_course)
                 continue
 
             found_diff = False
@@ -148,28 +163,30 @@ def check_for_differences(result_filename, new_courses):
 
             if found_diff:
                 global_found_diff = True
-                print("Found a difference:")
-                print("\tOld:", old_course)
-                print("\tNew:", new_course)
+                LOG.info("Found a difference:")
+                LOG.info("\tOld:", old_course)
+                LOG.info("\tNew:", new_course)
 
         if not global_found_diff:
-            print("No new grades found.")
+            LOG.info("No new grades found.")
 
 
 def download_courses() -> Optional[list]:
+    LOG.info("Downloading courses...")
+
     virtual_display = Display(visible=0, size=(800, 600))
     virtual_display.start()
 
     credentials_filename = "credentials.json"
     if not os.path.exists(credentials_filename):
-        print("Create a credentials.json file")
+        LOG.info("Create a credentials.json file")
         return
 
     try:
         driver = webdriver.Chrome()
     except Exception as e:
-        print(e)
-        print("Could not initialize the webdriver")
+        LOG.info(e)
+        LOG.info("Could not initialize the webdriver")
         return
 
     driver.get("https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome")
@@ -203,8 +220,6 @@ def check_grades():
 
     if courses is None:
         return
-
-    # pprint(courses)
 
     result_filename = "last_result.bin"
     check_for_differences(result_filename, courses)
