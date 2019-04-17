@@ -261,20 +261,5 @@ def show():
         print(f"{course.grade} ({print_passed(course)}): {course.name}")
 
 
-def alter_result():
-    """
-    Test method to see if different kinds of changes are being reported
-    """
-    result_filename = "last_result.bin"
-    with open(result_filename, "rb") as f:
-        last_courses = pickle.load(f)
-
-    last_courses[0]['grade'] = 5.0
-    last_courses = last_courses[:-1]
-
-    with open(result_filename, "wb+") as f:
-        pickle.dump(last_courses, f)
-
-
 if __name__ == '__main__':
     cli()
