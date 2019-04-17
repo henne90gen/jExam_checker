@@ -6,7 +6,9 @@ import pickle
 import re
 import logging
 import sys
-from typing import Optional
+import click
+from dataclasses import dataclass
+from typing import Optional, List
 from pprint import pprint
 from html.parser import HTMLParser
 from pyvirtualdisplay import Display
@@ -23,6 +25,14 @@ handler.setFormatter(formatter)
 LOG.handlers.clear()
 LOG.addHandler(handler)
 LOG.setLevel(logging.INFO)
+
+
+@dataclass
+class Course:
+    name: str = None
+    grade: float = None
+    date: datetime.datetime = None
+    passed: bool = False
 
 
 def login(driver, credentials_filename):
@@ -101,41 +111,42 @@ def clean_row(row):
                        row))))
 
 
-def create_courses(rows: list) -> list:
+def create_courses(rows: list) -> List[Course]:
     courses = []
     for row in rows:
-        course = {'grade': []}
+        course = Course()
+        grades = []
         for column in row:
             date_pattern = r'([0-9]{2}\.[0-9]{2}\.[0-9]{4})'
             date_match = re.match(date_pattern, column[:10])
             if date_match and date_match.group(1):
-                course['date'] = datetime.datetime.strptime(
+                course.date = datetime.datetime.strptime(
                     column[:10], "%d.%m.%Y")
             if "INF" in column:
-                course['name'] = column
+                course.name = column
             if "Bestanden" in column:
                 if "Nicht" in column:
-                    course['passed'] = False
+                    course.passed = False
                 else:
-                    course['passed'] = True
+                    course.passed = True
             try:
                 num = float(column)
-                course['grade'].append(num)
+                grades.append(num)
             except ValueError:
                 pass
 
-        if len(course) == 1 and len(course['grade']) == 0:
+        if len(grades) == 0:
             continue
-        if len(course['grade']) > 0:
-            course['grade'] = course['grade'][-1]
+        if len(grades) > 0:
+            course.grade = grades[-1]
         else:
-            course['grade'] = 1.0
+            course.grade = 1.0
         courses.append(course)
 
     return courses
 
 
-def check_for_differences(result_filename, new_courses):
+def check_for_differences(result_filename, new_courses: List[Course]):
     if os.path.exists(result_filename):
         with open(result_filename, "rb") as f:
             old_courses = pickle.load(f)
@@ -145,33 +156,33 @@ def check_for_differences(result_filename, new_courses):
         for new_course in new_courses:
             old_course = None
             for old_course in old_courses:
-                if old_course['name'] == new_course['name']:
+                if old_course.name == new_course.name:
                     break
                 old_course = None
 
             if old_course is None:
                 global_found_diff = True
                 LOG.info("Found a new grade:")
-                LOG.info("\t", new_course)
+                LOG.info(f"\t{str(new_course)}")
                 continue
 
             found_diff = False
-            for key in new_course:
-                if old_course[key] != new_course[key]:
+            for key in ["name", "grade", "date", "passed"]:
+                if getattr(old_course, key) != getattr(new_course, key):
                     found_diff = True
                     break
 
             if found_diff:
                 global_found_diff = True
                 LOG.info("Found a difference:")
-                LOG.info("\tOld:", old_course)
-                LOG.info("\tNew:", new_course)
+                LOG.info(f"\tOld: {old_course}")
+                LOG.info(f"\tNew: {new_course}")
 
         if not global_found_diff:
             LOG.info("No new grades found.")
 
 
-def download_courses() -> Optional[list]:
+def download_courses() -> Optional[List[Course]]:
     LOG.info("Downloading courses...")
 
     virtual_display = Display(visible=0, size=(800, 600))
@@ -215,7 +226,13 @@ def download_courses() -> Optional[list]:
     return create_courses(rows)
 
 
-def check_grades():
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+def check():
     courses = download_courses()
 
     if courses is None:
@@ -228,43 +245,20 @@ def check_grades():
         pickle.dump(courses, f)
 
 
-def print_grades():
+@cli.command()
+def show():
     result_filename = "last_result.bin"
     with open(result_filename, "rb") as f:
         courses = pickle.load(f)
 
     def print_passed(course):
-        if 'passed' in course:
-            return 'Passed' if course['passed'] else 'Not passed'
+        if course.passed:
+            return 'Passed' if course.passed else 'Not passed'
         else:
             return '?'
 
     for course in courses:
-        print(f"{course['grade']} ({print_passed(course)}): {course['name']}")
-
-
-def setup_check_grades(subparsers):
-    extract_parser = subparsers.add_parser('check')
-    extract_parser.set_defaults(func=check_grades)
-
-
-def setup_print_grades(subparsers):
-    dashboard_parser = subparsers.add_parser('show')
-    dashboard_parser.set_defaults(func=print_grades)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
-
-    setup_check_grades(subparsers)
-    setup_print_grades(subparsers)
-
-    options = parser.parse_args()
-    if hasattr(options, "func"):
-        options.func()
-    else:
-        parser.print_help()
+        print(f"{course.grade} ({print_passed(course)}): {course.name}")
 
 
 def alter_result():
@@ -283,4 +277,4 @@ def alter_result():
 
 
 if __name__ == '__main__':
-    main()
+    cli()
